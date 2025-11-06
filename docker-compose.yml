@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:16
+    container_name: voicelab_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-voicelab_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-voicelab_password}
+      POSTGRES_DB: ${POSTGRES_DB:-voicelab_pro}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-voicelab_user} -d ${POSTGRES_DB:-voicelab_pro}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voicelab-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voicelab_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override DATABASE_URL to use Docker service name 'db' instead of 'localhost'
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-voicelab_user}:${POSTGRES_PASSWORD:-voicelab_password}@db:5432/${POSTGRES_DB:-voicelab_pro}
+      - POSTGRES_HOST=db
+      # Only set if not in .env file (env_file takes precedence, but we ensure db hostname)
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - voicelab-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: voicelab_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - voicelab-network
+    command: npm run dev
+
+volumes:
+  postgres_data:
+
+networks:
+  voicelab-network:
+    driver: bridge
+
