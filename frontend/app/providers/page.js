@@ -3,8 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { FiZap, FiMic, FiArrowRight, FiTrendingUp } from 'react-icons/fi';
 import Link from 'next/link';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
-export default function ProvidersPage() {
+function ProvidersPageContent() {
   const router = useRouter();
 
   return (
@@ -110,6 +111,14 @@ export default function ProvidersPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProvidersPage() {
+  return (
+    <ProtectedRoute>
+      <ProvidersPageContent />
+    </ProtectedRoute>
   );
 }
 

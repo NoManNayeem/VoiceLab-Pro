@@ -1,11 +1,18 @@
 """FastAPI application entry point."""
+import warnings
+import logging
+
+# Suppress pydub warnings (from third-party dependency)
+warnings.filterwarnings('ignore', category=SyntaxWarning, module='pydub')
+warnings.filterwarnings('ignore', message='.*invalid escape sequence.*', category=SyntaxWarning)
+warnings.filterwarnings('ignore', message='.*Couldn\'t find ffmpeg.*', category=RuntimeWarning)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import get_settings, ConfigurationError
 from app.database import engine, Base, retry_db_connection
 from app.api.routes import auth, tts, stt, cartesia
-import logging
 
 # Configure logging
 logging.basicConfig(

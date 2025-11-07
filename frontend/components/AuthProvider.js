@@ -1,13 +1,14 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { apiClient } from '../lib/api';
+import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -16,14 +17,19 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
-      const token = apiClient.getToken();
-      if (token) {
-        const userData = await apiClient.getCurrentUser();
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include', // Include cookies
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
         setUser(userData);
+      } else {
+        setUser(null);
       }
     } catch (error) {
-      // Not authenticated
-      apiClient.removeToken();
+      console.error('Auth check error:', error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -32,17 +38,41 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     try {
-      const data = await apiClient.login(username, password);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Login failed' };
+      }
+
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error('Login error:', error);
+      return { success: false, error: error.message || 'Login failed' };
     }
   };
 
   const logout = async () => {
-    await apiClient.logout();
-    setUser(null);
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Include cookies
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      router.push('/login');
+    }
   };
 
   const value = {
@@ -51,6 +81,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     isAuthenticated: !!user,
+    refreshAuth: checkAuth, // Allow manual refresh
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

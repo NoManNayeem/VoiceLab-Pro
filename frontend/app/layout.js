@@ -1,5 +1,7 @@
 import '../styles/globals.css';
 import { AuthProvider } from '../components/AuthProvider';
+import { ToastProvider } from '../components/Toast';
+import ErrorBoundary from '../components/ErrorBoundary';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -12,13 +14,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="scroll-smooth">
       <body className="antialiased">
-        <AuthProvider>
-          <div className="flex flex-col min-h-screen bg-gray-50">
-            <Navbar />
-            <main className="flex-grow">{children}</main>
-            <Footer />
-          </div>
-        </AuthProvider>
+        <ErrorBoundary>
+          <ToastProvider>
+            <AuthProvider>
+              <div className="flex flex-col min-h-screen bg-gray-50">
+                <Navbar />
+                <main className="flex-grow">{children}</main>
+                <Footer />
+              </div>
+            </AuthProvider>
+          </ToastProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

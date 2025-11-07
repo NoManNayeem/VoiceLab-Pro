@@ -6,7 +6,7 @@ import { useAuth } from './AuthProvider';
 import { FiHome, FiLogIn, FiLogOut, FiMic, FiType, FiMenu, FiX, FiUser } from 'react-icons/fi';
 
 export default function Navbar() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -33,7 +33,7 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <Link
-                  href="/tts"
+                  href="/providers"
                   className="flex items-center space-x-1.5 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all px-3 py-2 rounded-lg text-sm font-medium"
                 >
                   <FiType className="w-4 h-4" />
@@ -53,6 +53,14 @@ export default function Navbar() {
                   <FiUser className="w-4 h-4" />
                   <span>About</span>
                 </Link>
+                {user && (
+                  <div className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700">
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                      {user.username?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    <span className="hidden lg:inline text-gray-600">{user.username}</span>
+                  </div>
+                )}
                 <button
                   onClick={handleLogout}
                   className="flex items-center space-x-1.5 text-gray-700 hover:text-red-600 hover:bg-red-50 transition-all px-3 py-2 rounded-lg text-sm font-medium"
@@ -91,8 +99,10 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            className="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
             aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
           >
             {mobileMenuOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
           </button>
@@ -100,12 +110,16 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 animate-slide-up">
+          <div 
+            id="mobile-menu"
+            className="md:hidden py-4 border-t border-gray-200 animate-slide-down"
+            role="menu"
+          >
             <div className="flex flex-col space-y-2">
               {isAuthenticated ? (
                 <>
                   <Link
-                    href="/tts"
+                    href="/providers"
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all px-4 py-2 rounded-lg text-sm font-medium"
                   >
@@ -128,6 +142,14 @@ export default function Navbar() {
                     <FiUser className="w-4 h-4" />
                     <span>About</span>
                   </Link>
+                  {user && (
+                    <div className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 border-t border-gray-200 pt-2 mt-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                        {user.username?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      <span className="text-gray-600">{user.username}</span>
+                    </div>
+                  )}
                   <button
                     onClick={() => {
                       handleLogout();

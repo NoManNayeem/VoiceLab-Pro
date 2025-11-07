@@ -9,60 +9,39 @@ class ApiClient {
   }
 
   /**
-   * Get authentication token from localStorage
-   */
-  getToken() {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
-    }
-    return null;
-  }
-
-  /**
-   * Set authentication token in localStorage
-   */
-  setToken(token) {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_token', token);
-    }
-  }
-
-  /**
-   * Remove authentication token from localStorage
-   */
-  removeToken() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-    }
-  }
-
-  /**
-   * Make API request
+   * Make API request with cookie-based authentication
+   * Cookies are automatically sent by the browser
    */
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    const token = this.getToken();
 
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const config = {
       ...options,
       headers,
+      credentials: 'include', // Include cookies in cross-origin requests
     };
 
     try {
       const response = await fetch(url, config);
+      
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text();
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || 'An error occurred');
+        throw new Error(data.detail || data.error || 'An error occurred');
       }
 
       return data;
@@ -72,47 +51,17 @@ class ApiClient {
   }
 
   /**
-   * Login
-   */
-  async login(username, password) {
-    const data = await this.request('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
-    if (data.access_token) {
-      this.setToken(data.access_token);
-    }
-    return data;
-  }
-
-  /**
-   * Logout
-   */
-  async logout() {
-    try {
-      await this.request('/api/auth/logout', {
-        method: 'POST',
-      });
-    } catch (error) {
-      // Ignore errors on logout
-    } finally {
-      this.removeToken();
-    }
-  }
-
-  /**
-   * Get current user
-   */
-  async getCurrentUser() {
-    return this.request('/api/auth/me');
-  }
-
-  /**
    * Generate TTS audio
+   * Uses Next.js API route proxy to handle authentication
    */
   async generateTTS(text, voiceId = null, options = {}) {
-    return this.request('/api/tts/generate', {
+    // Use Next.js API route proxy (which handles cookies server-side)
+    const response = await fetch('/api/tts/generate', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
       body: JSON.stringify({ 
         text, 
         voice_id: voiceId,
@@ -125,6 +74,15 @@ class ApiClient {
         use_speaker_boost: options.useSpeakerBoost
       }),
     });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      // Preserve the detailed error message from backend
+      const errorMsg = data.error || data.detail || 'Failed to generate audio';
+      throw new Error(errorMsg);
+    }
+    
+    return response.json();
   }
 
   /**
@@ -136,9 +94,21 @@ class ApiClient {
 
   /**
    * Get available voices
+   * Uses Next.js API route proxy to handle authentication
    */
   async getVoices() {
-    return this.request('/api/tts/voices');
+    // Use Next.js API route proxy (which handles cookies server-side)
+    const response = await fetch('/api/tts/voices', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || data.detail || 'Failed to get voices');
+    }
+    
+    return response.json();
   }
 
   /**
@@ -150,10 +120,16 @@ class ApiClient {
 
   /**
    * Generate Cartesia TTS audio
+   * Uses Next.js API route proxy to handle authentication
    */
   async generateCartesiaTTS(text, options = {}) {
-    return this.request('/api/cartesia/generate', {
+    // Use Next.js API route proxy (which handles cookies server-side)
+    const response = await fetch('/api/cartesia/generate', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
       body: JSON.stringify({
         text,
         voice_id: options.voiceId,
@@ -164,27 +140,70 @@ class ApiClient {
         emotion: options.emotion || 'neutral',
       }),
     });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || data.detail || 'Failed to generate audio');
+    }
+    
+    return response.json();
   }
 
   /**
    * Get available Cartesia voices
+   * Uses Next.js API route proxy to handle authentication
    */
   async getCartesiaVoices() {
-    return this.request('/api/cartesia/voices');
+    // Use Next.js API route proxy (which handles cookies server-side)
+    const response = await fetch('/api/cartesia/voices', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || data.detail || 'Failed to get voices');
+    }
+    
+    return response.json();
   }
 
   /**
    * Get available Cartesia models
+   * Uses Next.js API route proxy to handle authentication
    */
   async getCartesiaModels() {
-    return this.request('/api/cartesia/models');
+    // Use Next.js API route proxy (which handles cookies server-side)
+    const response = await fetch('/api/cartesia/models', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || data.detail || 'Failed to get models');
+    }
+    
+    return response.json();
   }
 
   /**
    * Get available languages
+   * Uses Next.js API route proxy to handle authentication
    */
   async getCartesiaLanguages() {
-    return this.request('/api/cartesia/languages');
+    // Use Next.js API route proxy (which handles cookies server-side)
+    const response = await fetch('/api/cartesia/languages', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || data.detail || 'Failed to get languages');
+    }
+    
+    return response.json();
   }
 }
 

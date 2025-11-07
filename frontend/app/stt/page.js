@@ -1,40 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../../components/AuthProvider';
-import { FiMic, FiLoader, FiClock, FiZap } from 'react-icons/fi';
+import { FiMic, FiClock, FiZap } from 'react-icons/fi';
 import { FaBrain } from 'react-icons/fa';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import Link from 'next/link';
 
-export default function STTPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, authLoading, router]);
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-primary-50/30">
-        <div className="text-center">
-          <FiLoader className="w-8 h-8 animate-spin text-primary-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
+function STTPageContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/20 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl w-full">
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-soft border border-gray-200/50 p-8 sm:p-12 animate-slide-up">
+          <div className="mb-6">
+            <Link
+              href="/providers"
+              className="text-sm text-gray-600 hover:text-primary-600 transition-colors inline-flex items-center gap-2"
+            >
+              ← Back to providers
+            </Link>
+          </div>
           <div className="text-center">
             <div className="inline-block mb-6">
               <div className="relative">
@@ -101,5 +85,13 @@ export default function STTPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function STTPage() {
+  return (
+    <ProtectedRoute>
+      <STTPageContent />
+    </ProtectedRoute>
   );
 }

@@ -144,24 +144,48 @@ def generate_tts_audio(
             
             # Don't retry on certain errors
             if "401" in error_msg or "unauthorized" in error_msg.lower():
+                # Try to extract more details from the exception
+                error_details = error_msg
+                if hasattr(e, 'response'):
+                    try:
+                        if hasattr(e.response, 'text'):
+                            import json
+                            try:
+                                error_data = json.loads(e.response.text)
+                                if 'detail' in error_data:
+                                    error_details = str(error_data['detail'])
+                                elif isinstance(error_data, dict):
+                                    error_details = str(error_data)
+                            except:
+                                error_details = e.response.text
+                        elif hasattr(e.response, 'json'):
+                            error_data = e.response.json()
+                            if 'detail' in error_data:
+                                error_details = str(error_data['detail'])
+                    except:
+                        pass
+                
                 # Check for other unusual activity indicators
-                if "unusual" in error_msg.lower() or "abuse" in error_msg.lower() or "free tier" in error_msg.lower():
+                if "unusual" in error_details.lower() or "abuse" in error_details.lower() or "free tier" in error_details.lower() or "temporarily unavailable" in error_details.lower() or "service" in error_details.lower():
                     raise ConfigurationError(
-                        "ElevenLabs API: Unusual activity detected. This may be due to:\n"
+                        "ElevenLabs service temporarily unavailable.\n\n"
+                        "This may be due to:\n"
                         "1. Using a VPN/Proxy (Free Tier doesn't work with VPNs)\n"
                         "2. Multiple free accounts from the same IP\n"
-                        "3. Rate limiting or abuse detection\n\n"
+                        "3. Rate limiting or abuse detection\n"
+                        "4. Service maintenance or temporary outage\n\n"
                         "Solutions:\n"
-                        "- Disable VPN/Proxy if using one\n"
-                        "- Consider upgrading to a Paid Plan\n"
-                        "- Contact ElevenLabs support if you believe this is an error\n\n"
-                        f"Full error: {error_msg}"
+                        "• Disable VPN/Proxy if using one\n"
+                        "• Wait a few minutes and try again\n"
+                        "• Consider upgrading to a Paid Plan\n"
+                        "• Contact ElevenLabs support: https://elevenlabs.io/help"
                     )
                 else:
                     raise ConfigurationError(
-                        f"Invalid ElevenLabs API key. Please check your ELEVENLABS_API_KEY in .env file. "
-                        f"Get your API key from https://elevenlabs.io/\n"
-                        f"Error: {error_msg}"
+                        f"ElevenLabs service temporarily unavailable.\n\n"
+                        f"Please check your ELEVENLABS_API_KEY in .env file.\n"
+                        f"Get your API key from https://elevenlabs.io/\n\n"
+                        f"If this persists, the service may be temporarily unavailable or your API key may need verification."
                     )
             
             if "429" in error_msg or "rate limit" in error_msg.lower():

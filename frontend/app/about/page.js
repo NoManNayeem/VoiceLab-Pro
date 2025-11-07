@@ -146,7 +146,7 @@ export default function AboutPage() {
               <span>LinkedIn</span>
             </a>
             <a
-              href="mailto:nayeem@example.com"
+              href="mailto:contact@voicelabpro.com"
               className="flex items-center gap-2 px-6 py-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105 text-gray-700 font-medium"
             >
               <FiMail className="w-5 h-5" />

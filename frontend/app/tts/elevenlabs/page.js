@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../../components/AuthProvider';
 import { apiClient } from '../../../lib/api';
+import ProtectedRoute from '../../../components/ProtectedRoute';
+import { useToast } from '../../../components/Toast';
+import { VoiceListSkeleton } from '../../../components/LoadingSkeleton';
 import { 
   FiPlay, 
   FiDownload, 
@@ -106,9 +109,10 @@ const LANGUAGES = [
   { code: 'vi', name: 'Vietnamese' },
 ];
 
-export default function TTSPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+function TTSPageContent() {
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [text, setText] = useState('');
   const [audioUrl, setAudioUrl] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -126,12 +130,6 @@ export default function TTSPage() {
   const [showFormattingHelp, setShowFormattingHelp] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, authLoading, router]);
-
-  useEffect(() => {
     // Load available voices
     const loadVoices = async () => {
       if (!isAuthenticated) return;
@@ -146,13 +144,16 @@ export default function TTSPage() {
         }
       } catch (err) {
         console.error('Failed to load voices:', err);
+        toast.warning('Could not load voices. Using default voice.');
         // Continue without voices - user can still use default
       } finally {
         setLoadingVoices(false);
       }
     };
 
-    loadVoices();
+    if (isAuthenticated) {
+      loadVoices();
+    }
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -173,12 +174,14 @@ export default function TTSPage() {
     setAudioUrl(null);
 
     if (!text.trim()) {
+      toast.error('Please enter some text to convert to speech');
       setError('Please enter some text to convert to speech');
       setLoading(false);
       return;
     }
 
     if (text.length > 5000) {
+      toast.error('Text is too long. Please keep it under 5000 characters.');
       setError('Text is too long. Please keep it under 5000 characters.');
       setLoading(false);
       return;
@@ -203,6 +206,7 @@ export default function TTSPage() {
       });
       setAudioUrl(response.audio_url);
       setSuccess(true);
+      toast.success('Audio generated successfully!');
       
       // Create audio element for playback
       const audio = new Audio(response.audio_url);
@@ -215,13 +219,25 @@ export default function TTSPage() {
     } catch (err) {
       const errorMsg = err.message || 'Failed to generate audio';
       // Make error messages more user-friendly
-      if (errorMsg.includes('API key') || errorMsg.includes('unusual activity')) {
-        setError('Service temporarily unavailable. Please try again in a moment or contact support.');
+      let userFriendlyMsg = errorMsg;
+      
+      // If the error already contains a user-friendly message, use it as-is
+      if (errorMsg.includes('temporarily unavailable')) {
+        // Already has a good message, just format it
+        userFriendlyMsg = errorMsg;
+      } else if (errorMsg.includes('API key') || 
+                 errorMsg.includes('unusual activity') ||
+                 errorMsg.includes('401') ||
+                 errorMsg.includes('unauthorized')) {
+        userFriendlyMsg = 'Service temporarily unavailable. Please try again in a moment or contact support.';
       } else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
-        setError('Too many requests. Please wait a moment and try again.');
-      } else {
-        setError(errorMsg);
+        userFriendlyMsg = 'Too many requests. Please wait a moment and try again.';
       }
+      
+      // Format multi-line error messages for display (replace newlines with spaces)
+      const displayMsg = userFriendlyMsg.replace(/\n+/g, ' ').trim();
+      setError(displayMsg);
+      toast.error(displayMsg);
     } finally {
       setLoading(false);
     }
@@ -247,21 +263,6 @@ export default function TTSPage() {
       document.getElementById('text')?.focus();
     }, 100);
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <FiLoader className="w-8 h-8 animate-spin text-primary-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50/20 flex">
@@ -428,9 +429,10 @@ export default function TTSPage() {
                     Voice Selection
                   </label>
                   {loadingVoices ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <FiLoader className="w-4 h-4 animate-spin" />
-                      <span>Loading voices...</span>
+                    <VoiceListSkeleton />
+                  ) : voices.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="text-sm">No voices available. Using default voice.</p>
                     </div>
                   ) : (
                     <select
@@ -438,6 +440,7 @@ export default function TTSPage() {
                       value={selectedVoice}
                       onChange={(e) => setSelectedVoice(e.target.value)}
                       className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm font-medium text-gray-700 transition-all"
+                      aria-label="Select voice"
                     >
                       {voices.length === 0 ? (
                         <option value="">Default Voice (Loading...)</option>
@@ -810,5 +813,13 @@ export default function TTSPage() {
         </button>
       )}
     </div>
+  );
+}
+
+export default function TTSPage() {
+  return (
+    <ProtectedRoute>
+      <TTSPageContent />
+    </ProtectedRoute>
   );
 }

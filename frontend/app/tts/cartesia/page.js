@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/AuthProvider';
 import { apiClient } from '../../../lib/api';
+import ProtectedRoute from '../../../components/ProtectedRoute';
+import { useToast } from '../../../components/Toast';
 import { 
   FiPlay, 
   FiDownload, 
@@ -84,9 +86,10 @@ const EMOTIONS = [
   { id: 'calm', name: 'Calm' },
 ];
 
-export default function CartesiaTTSPage() {
-  const { isAuthenticated } = useAuth();
+function CartesiaTTSPageContent() {
   const router = useRouter();
+  const toast = useToast();
+  const { isAuthenticated } = useAuth();
   
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -102,24 +105,46 @@ export default function CartesiaTTSPage() {
   const [volume, setVolume] = useState(1.0);
   const [showSettings, setShowSettings] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [loadingVoices, setLoadingVoices] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
+    // Only load voices when authenticated
+    if (isAuthenticated) {
+      loadVoices();
     }
-    loadVoices();
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated]);
 
   const loadVoices = async () => {
+    setLoadingVoices(true);
     try {
       const response = await apiClient.getCartesiaVoices();
       if (response.voices && response.voices.length > 0) {
         setVoices(response.voices);
         setSelectedVoice(response.voices[0].voice_id);
+      } else {
+        // Use default voice if API returns empty
+        const defaultVoice = {
+          voice_id: "6ccbfb76-1fc6-48f7-b71d-91ac6298247b",
+          name: "Default Voice",
+          description: "High-quality default voice"
+        };
+        setVoices([defaultVoice]);
+        setSelectedVoice(defaultVoice.voice_id);
+        toast.info('Using default voice. Cartesia API may not have returned voices.');
       }
     } catch (err) {
       console.error('Failed to load voices:', err);
+      // Set default voice on error
+      const defaultVoice = {
+        voice_id: "6ccbfb76-1fc6-48f7-b71d-91ac6298247b",
+        name: "Default Voice",
+        description: "High-quality default voice"
+      };
+      setVoices([defaultVoice]);
+      setSelectedVoice(defaultVoice.voice_id);
+      toast.warning('Using default voice. Could not load voices from API.');
+    } finally {
+      setLoadingVoices(false);
     }
   };
 
@@ -130,12 +155,16 @@ export default function CartesiaTTSPage() {
 
   const handleGenerate = async () => {
     if (!text.trim()) {
-      setError('Please enter some text to convert to speech');
+      const msg = 'Please enter some text to convert to speech';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
     if (text.length > 5000) {
-      setError('Text is too long. Please keep it under 5000 characters.');
+      const msg = 'Text is too long. Please keep it under 5000 characters.';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -163,6 +192,7 @@ export default function CartesiaTTSPage() {
         const newAudio = new Audio(response.audio_url);
         setAudio(newAudio);
         setSuccess(true);
+        toast.success('Audio generated successfully!');
         // Auto-scroll to audio player
         setTimeout(() => {
           document.getElementById('audio-player')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -171,13 +201,14 @@ export default function CartesiaTTSPage() {
     } catch (err) {
       const errorMsg = err.message || 'Failed to generate audio';
       // Make error messages more user-friendly
+      let userFriendlyMsg = errorMsg;
       if (errorMsg.includes('API key')) {
-        setError('API configuration error. Please contact support.');
+        userFriendlyMsg = 'API configuration error. Please contact support.';
       } else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
-        setError('Too many requests. Please wait a moment and try again.');
-      } else {
-        setError(errorMsg);
+        userFriendlyMsg = 'Too many requests. Please wait a moment and try again.';
       }
+      setError(userFriendlyMsg);
+      toast.error(userFriendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -345,7 +376,16 @@ export default function CartesiaTTSPage() {
                   </div>
 
                   {/* Voice Selection */}
-                  {voices.length > 0 && (
+                  {loadingVoices ? (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        Voice
+                      </label>
+                      <div className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-gray-100 animate-pulse">
+                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  ) : voices.length > 0 ? (
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-2">
                         Voice
@@ -354,6 +394,7 @@ export default function CartesiaTTSPage() {
                         value={selectedVoice}
                         onChange={(e) => setSelectedVoice(e.target.value)}
                         className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-gray-900"
+                        aria-label="Select voice"
                       >
                         {voices.map((voice) => (
                           <option key={voice.voice_id} value={voice.voice_id}>
@@ -361,6 +402,10 @@ export default function CartesiaTTSPage() {
                           </option>
                         ))}
                       </select>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-xs">No voices available. Using default voice.</p>
                     </div>
                   )}
 
@@ -516,6 +561,14 @@ export default function CartesiaTTSPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CartesiaTTSPage() {
+  return (
+    <ProtectedRoute>
+      <CartesiaTTSPageContent />
+    </ProtectedRoute>
   );
 }
 

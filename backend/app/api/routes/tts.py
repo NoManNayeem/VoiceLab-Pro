@@ -1,36 +1,35 @@
 """TTS routes."""
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.tts import TTSGenerateRequest, TTSGenerateResponse, TTSHistoryResponse, TTSHistoryItem
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_from_request
 from app.models.user import User
 from app.models.tts_request import TTSRequest
 from app.services.elevenlabs_service import generate_tts_audio, get_available_voices
 from app.config import ConfigurationError
 import io
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 
 
 @router.post("/generate", response_model=TTSGenerateResponse)
 async def generate_tts(
-    request: TTSGenerateRequest,
-    authorization: str = Header(None),
+    request_body: TTSGenerateRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Generate TTS audio from text."""
-    # Authenticate user
-    token = None
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-    
-    user = get_current_user(token=token, db=db)
+    # Authenticate user using request-based dependency
+    user = get_current_user_from_request(request, db)
     
     # Validate text
-    if not request.text or len(request.text.strip()) == 0:
+    if not request_body.text or len(request_body.text.strip()) == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Text cannot be empty"
@@ -39,22 +38,22 @@ async def generate_tts(
     try:
         # Generate audio using ElevenLabs (with retry logic and voice settings)
         audio_bytes = generate_tts_audio(
-            text=request.text,
-            voice_id=request.voice_id,
+            text=request_body.text,
+            voice_id=request_body.voice_id,
             max_retries=3,
-            stability=request.stability,
-            similarity_boost=request.similarity_boost,
-            style=request.style,
-            use_speaker_boost=request.use_speaker_boost,
-            model_id=request.model_id,
-            language=request.language
+            stability=request_body.stability,
+            similarity_boost=request_body.similarity_boost,
+            style=request_body.style,
+            use_speaker_boost=request_body.use_speaker_boost,
+            model_id=request_body.model_id,
+            language=request_body.language
         )
         
         # Store request in database
         tts_request = TTSRequest(
             user_id=user.id,
-            text=request.text,
-            voice_id=request.voice_id,
+            text=request_body.text,
+            voice_id=request_body.voice_id,
             audio_url=None  # For POC, we return audio directly
         )
         db.add(tts_request)
@@ -73,37 +72,54 @@ async def generate_tts(
         return TTSGenerateResponse(
             request_id=tts_request.id,
             audio_url=audio_url,
-            text=request.text,
-            voice_id=request.voice_id,
+            text=request_body.text,
+            voice_id=request_body.voice_id,
             created_at=tts_request.created_at
         )
     except ConfigurationError as e:
         # Handle configuration/API key errors with clear messages
+        error_detail = str(e)
+        # Check if it's a service unavailable or unusual activity error
+        if "temporarily unavailable" in error_detail.lower() or "unusual activity" in error_detail.lower():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=error_detail
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail=error_detail
         )
     except Exception as e:
+        error_msg = str(e)
+        # Check for 401/unauthorized errors from ElevenLabs
+        if "401" in error_msg or "unauthorized" in error_msg.lower():
+            # If the error already contains a user-friendly message, use it
+            if "temporarily unavailable" in error_msg.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=error_msg
+                )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="ElevenLabs service temporarily unavailable. Please try again in a moment or contact support.\n\n"
+                       "If this persists, the service may be temporarily unavailable or your API key may need verification."
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate audio: {str(e)}"
+            detail=f"Failed to generate audio: {error_msg}"
         )
 
 
 @router.get("/history", response_model=TTSHistoryResponse)
 async def get_tts_history(
-    authorization: str = Header(None),
+    request: Request,
     db: Session = Depends(get_db),
     limit: int = 10,
     offset: int = 0
 ):
     """Get user's TTS generation history."""
-    # Authenticate user
-    token = None
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-    
-    user = get_current_user(token=token, db=db)
+    # Authenticate user using request-based dependency
+    user = get_current_user_from_request(request, db)
     
     # Get user's TTS requests
     requests = db.query(TTSRequest).filter(
@@ -124,16 +140,12 @@ async def get_tts_history(
 
 @router.get("/voices")
 async def get_voices(
-    authorization: str = Header(None),
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Get list of available ElevenLabs voices."""
-    # Authenticate user
-    token = None
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-    
-    user = get_current_user(token=token, db=db)
+    # Authenticate user using request-based dependency
+    user = get_current_user_from_request(request, db)
     
     try:
         voices = get_available_voices()

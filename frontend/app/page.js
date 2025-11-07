@@ -22,7 +22,7 @@ export default function Home() {
               Transform text into natural speech with cutting-edge AI technology
             </p>
             <p className="text-base sm:text-lg text-gray-500 mb-8 max-w-2xl mx-auto animate-slide-up">
-              Simple, fast, and free to try. No technical knowledge required.
+              Simple, fast, and professional. No technical knowledge required.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12 animate-slide-up">
               <Link
@@ -78,7 +78,7 @@ export default function Home() {
               AI-Powered
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Powered by ElevenLabs advanced AI models for the highest quality voice synthesis and recognition.
+              Powered by ElevenLabs and Cartesia AI for the highest quality voice synthesis with ultra-low latency.
             </p>
           </div>
         </div>

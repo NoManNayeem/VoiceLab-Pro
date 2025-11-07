@@ -189,20 +189,24 @@ def generate_tts_audio(
 def get_available_voices() -> List[Dict]:
     """
     Get list of available voices from Cartesia API.
+    Returns default voices if API call fails or returns empty.
     
     Returns:
         List of voice objects with id, name, and metadata
-    
-    Raises:
-        ConfigurationError: If API key is not set
-        Exception: If fetching voices fails
     """
+    # Default voices to use if API call fails or returns empty
+    DEFAULT_VOICES = [
+        {
+            "voice_id": "6ccbfb76-1fc6-48f7-b71d-91ac6298247b",
+            "name": "Default Voice",
+            "description": "High-quality default voice",
+        }
+    ]
+    
     client = get_cartesia_client()
     if not settings.cartesia_api_key or client is None:
-        raise ConfigurationError(
-            "CARTESIA_API_KEY is not set. Please set it in your .env file. "
-            "Get your API key from https://play.cartesia.ai/keys"
-        )
+        logger.warning("Cartesia API key not set. Returning default voices.")
+        return DEFAULT_VOICES
     
     try:
         logger.info("Fetching available voices from Cartesia")
@@ -223,16 +227,21 @@ def get_available_voices() -> List[Dict]:
         
         if response.status_code != 200:
             error_msg = response.text
+            logger.warning(f"Cartesia API returned status {response.status_code}: {error_msg}")
             if response.status_code == 401:
-                raise ConfigurationError(
-                    f"Invalid Cartesia API key. Please check your CARTESIA_API_KEY in .env file. "
-                    f"Get your API key from https://play.cartesia.ai/keys\n"
-                    f"Error: {error_msg}"
-                )
-            raise Exception(f"Failed to fetch voices: {error_msg}")
+                logger.warning("Invalid Cartesia API key. Returning default voices.")
+                return DEFAULT_VOICES
+            # For other errors, return default voices instead of raising
+            logger.warning("Returning default voices due to API error")
+            return DEFAULT_VOICES
         
         data = response.json()
         voices = data.get("voices", [])
+        
+        # If API returns empty list, use default voices
+        if not voices or len(voices) == 0:
+            logger.warning("Cartesia API returned 0 voices. Using default voices.")
+            return DEFAULT_VOICES
         
         # Format voice data
         voice_list = []
@@ -251,11 +260,9 @@ def get_available_voices() -> List[Dict]:
         logger.info(f"Retrieved {len(voice_list)} voices from Cartesia")
         return voice_list
         
-    except ConfigurationError:
-        raise
     except Exception as e:
-        logger.error(f"Failed to fetch Cartesia voices: {str(e)}")
-        raise Exception(f"Failed to fetch voices: {str(e)}")
+        logger.warning(f"Failed to fetch Cartesia voices: {str(e)}. Returning default voices.")
+        return DEFAULT_VOICES
 
 
 def get_available_models() -> List[Dict]:
