@@ -22,7 +22,7 @@ export default function LoginPage() {
     try {
       const result = await login(username, password);
       if (result.success) {
-        router.push('/tts');
+        router.push('/providers');
       } else {
         setError(result.error || 'Invalid username or password');
       }
@@ -52,6 +52,11 @@ export default function LoginPage() {
             <p className="text-sm text-gray-600">
               Sign in to access your account
             </p>
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-800">
+                <strong>Demo Account:</strong> Username: <code className="bg-blue-100 px-1 rounded">Nayeem</code>, Password: <code className="bg-blue-100 px-1 rounded">password</code>
+              </p>
+            </div>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>

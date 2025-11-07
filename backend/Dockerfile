@@ -10,7 +10,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 
 # Install dependencies directly (skip editable install for now)
-RUN uv pip install --system fastapi uvicorn[standard] python-dotenv sqlalchemy alembic psycopg2-binary elevenlabs pydantic pydantic-settings python-multipart
+RUN uv pip install --system fastapi uvicorn[standard] python-dotenv sqlalchemy alembic psycopg2-binary elevenlabs cartesia pydantic pydantic-settings python-multipart requests
 
 # Copy application code
 COPY app ./app

@@ -18,9 +18,11 @@ export default function Home() {
                 </h1>
               </div>
             </div>
-            <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed animate-slide-up">
-              Transform text into natural speech and convert speech to text with
-              cutting-edge AI technology. Experience the future of voice interaction.
+            <p className="text-xl sm:text-2xl text-gray-600 mb-4 max-w-3xl mx-auto leading-relaxed animate-slide-up">
+              Transform text into natural speech with cutting-edge AI technology
+            </p>
+            <p className="text-base sm:text-lg text-gray-500 mb-8 max-w-2xl mx-auto animate-slide-up">
+              Simple, fast, and free to try. No technical knowledge required.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12 animate-slide-up">
               <Link
@@ -78,6 +80,42 @@ export default function Home() {
             <p className="text-gray-600 leading-relaxed">
               Powered by ElevenLabs advanced AI models for the highest quality voice synthesis and recognition.
             </p>
+          </div>
+        </div>
+
+        {/* How It Works */}
+        <div className="mt-20 mb-16">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            How It Works
+          </h2>
+          <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
+                1
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Sign In</h3>
+              <p className="text-gray-600 text-sm">
+                Use the demo account or create your own to get started
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-accent-600">
+                2
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Choose Provider</h3>
+              <p className="text-gray-600 text-sm">
+                Select ElevenLabs or Cartesia AI based on your needs
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
+                3
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Generate & Play</h3>
+              <p className="text-gray-600 text-sm">
+                Type your text, click generate, and listen to your audio
+              </p>
+            </div>
           </div>
         </div>
 

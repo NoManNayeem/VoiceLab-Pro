@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../components/AuthProvider';
-import { apiClient } from '../../lib/api';
+import Link from 'next/link';
+import { useAuth } from '../../../components/AuthProvider';
+import { apiClient } from '../../../lib/api';
 import { 
   FiPlay, 
   FiDownload, 
@@ -19,7 +20,7 @@ import {
   FiChevronDown,
   FiChevronUp
 } from 'react-icons/fi';
-import AnimatedSpeaker from '../../components/AnimatedSpeaker';
+import AnimatedSpeaker from '../../../components/AnimatedSpeaker';
 
 // Sample texts for quick testing
 const SAMPLE_TEXTS = [
@@ -112,6 +113,7 @@ export default function TTSPage() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [audioElement, setAudioElement] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [voices, setVoices] = useState([]);
@@ -166,11 +168,18 @@ export default function TTSPage() {
   const handleGenerate = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
     setLoading(true);
     setAudioUrl(null);
 
     if (!text.trim()) {
-      setError('Please enter some text');
+      setError('Please enter some text to convert to speech');
+      setLoading(false);
+      return;
+    }
+
+    if (text.length > 5000) {
+      setError('Text is too long. Please keep it under 5000 characters.');
       setLoading(false);
       return;
     }
@@ -193,12 +202,26 @@ export default function TTSPage() {
         isMultiSpeaker: speakerMode === 'multi'
       });
       setAudioUrl(response.audio_url);
+      setSuccess(true);
       
       // Create audio element for playback
       const audio = new Audio(response.audio_url);
       setAudioElement(audio);
+      
+      // Auto-scroll to audio player
+      setTimeout(() => {
+        document.getElementById('audio-player')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
     } catch (err) {
-      setError(err.message || 'Failed to generate audio. Please try again.');
+      const errorMsg = err.message || 'Failed to generate audio';
+      // Make error messages more user-friendly
+      if (errorMsg.includes('API key') || errorMsg.includes('unusual activity')) {
+        setError('Service temporarily unavailable. Please try again in a moment or contact support.');
+      } else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
+        setError('Too many requests. Please wait a moment and try again.');
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -245,6 +268,14 @@ export default function TTSPage() {
       {/* Main Content Area */}
       <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:mr-80' : ''}`}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+          <div className="mb-6">
+            <Link
+              href="/providers"
+              className="text-sm text-gray-600 hover:text-primary-600 transition-colors inline-flex items-center gap-2"
+            >
+              ← Back to providers
+            </Link>
+          </div>
           <div className="max-w-4xl mx-auto">
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-soft border border-gray-200/50 p-6 sm:p-8 lg:p-10 animate-slide-up">
               {/* Header */}
@@ -558,12 +589,19 @@ export default function TTSPage() {
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <p className="text-sm text-gray-500">
-                      {text.length} characters
+                      {text.length} / 5000 characters
+                      {text.length > 4500 && (
+                        <span className="ml-2 text-orange-600 font-medium">(Approaching limit)</span>
+                      )}
                     </p>
                     {text.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => setText('')}
+                        onClick={() => {
+                          setText('');
+                          setError('');
+                          setSuccess(false);
+                        }}
                         className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         Clear
@@ -572,11 +610,24 @@ export default function TTSPage() {
                   </div>
                 </div>
 
+                {/* Success Message */}
+                {success && (
+                  <div className="bg-green-50 border-l-4 border-green-400 text-green-700 px-4 py-3 rounded-lg animate-fade-in flex items-center gap-2">
+                    <span className="text-lg">✓</span>
+                    <p className="text-sm font-medium">Audio generated successfully! Check the audio player on the right.</p>
+                  </div>
+                )}
+
                 {/* Error Message */}
                 {error && (
-                  <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-lg animate-fade-in flex items-center gap-2">
-                    <FiX className="w-5 h-5 flex-shrink-0" />
-                    <span>{error}</span>
+                  <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-lg animate-fade-in flex items-start gap-2">
+                    <span className="text-lg mt-0.5">⚠</span>
+                    <div>
+                      <p className="text-sm font-medium">{error}</p>
+                      {error.includes('Service') && (
+                        <p className="text-xs mt-1 text-red-600">If this persists, the service may be temporarily unavailable.</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -620,13 +671,20 @@ export default function TTSPage() {
 
               {/* Generated Audio */}
               {audioUrl && (
-                <div className="mt-8 p-6 sm:p-8 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl border-2 border-green-200/50 animate-fade-in shadow-soft">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      <FiVolume2 className="w-5 h-5 text-green-600" />
-                    </div>
-                    <span>Generated Audio</span>
-                  </h2>
+                <div id="audio-player" className="mt-8 p-6 sm:p-8 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl border-2 border-green-200/50 animate-fade-in shadow-soft">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <FiVolume2 className="w-5 h-5 text-green-600" />
+                      </div>
+                      <span>Generated Audio</span>
+                    </h2>
+                    {success && (
+                      <div className="bg-green-100 border border-green-300 rounded-lg px-3 py-1">
+                        <p className="text-xs text-green-800 font-medium">✓ Ready!</p>
+                      </div>
+                    )}
+                  </div>
                   <div className="bg-white rounded-xl p-4 shadow-inner border border-green-200/50 mb-6">
                     <audio
                       ref={(el) => {

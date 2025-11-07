@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import get_settings, ConfigurationError
 from app.database import engine, Base, retry_db_connection
-from app.api.routes import auth, tts, stt
+from app.api.routes import auth, tts, stt, cartesia
 import logging
 
 # Configure logging
@@ -56,6 +56,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(tts.router)
 app.include_router(stt.router)
+app.include_router(cartesia.router)
 
 
 @app.get("/")

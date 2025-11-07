@@ -29,13 +29,43 @@ voicelab-pro/
    cp frontend/.env.local.example frontend/.env.local
    ```
 3. Update `.env` files with your configuration:
-   - **Important**: Add your ElevenLabs API key to `backend/.env`:
+   
+   **Backend (`backend/.env`):**
+   - **ElevenLabs API Key** (Required for ElevenLabs TTS):
      ```
      ELEVENLABS_API_KEY=your_api_key_here
      ```
      Get your API key from: https://elevenlabs.io/
    
-   **Note**: If you're using a Free Tier account:
+   - **Cartesia AI API Key** (Required for Cartesia AI TTS):
+     ```
+     CARTESIA_API_KEY=your_api_key_here
+     ```
+     Get your API key from: https://play.cartesia.ai/keys
+   
+   - **Database Configuration** (Optional - defaults provided):
+     ```
+     POSTGRES_USER=voicelab_user
+     POSTGRES_PASSWORD=voicelab_password
+     POSTGRES_DB=voicelab_pro
+     POSTGRES_HOST=localhost
+     DB_PORT=5432
+     ```
+   
+   - **Application Settings** (Optional - defaults provided):
+     ```
+     SECRET_KEY=change-this-secret-key-in-production
+     ENVIRONMENT=development
+     FRONTEND_URL=http://localhost:3000
+     ```
+   
+   **Frontend (`frontend/.env.local`):**
+   - **API URL** (Optional - defaults to http://localhost:8000):
+     ```
+     NEXT_PUBLIC_API_URL=http://localhost:8000
+     ```
+   
+   **Note**: If you're using ElevenLabs Free Tier account:
    - Free Tier doesn't work with VPNs/Proxies
    - Multiple free accounts from the same IP may trigger abuse detection
    - Rate limit: 3 requests/minute
@@ -89,10 +119,37 @@ npm run dev
 
 ## Tech Stack
 
-- **Backend**: FastAPI 0.121.0, SQLAlchemy, Alembic, PostgreSQL, ElevenLabs SDK v3
+- **Backend**: FastAPI 0.121.0, SQLAlchemy, Alembic, PostgreSQL
+- **TTS Providers**: ElevenLabs SDK v3, Cartesia AI SDK
 - **Frontend**: Next.js 16, React, Tailwind CSS, React Icons
 - **Infrastructure**: Docker, Docker Compose
 - **Package Management**: uv (Python), npm (Node.js)
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ELEVENLABS_API_KEY` | Yes* | - | ElevenLabs API key for TTS |
+| `CARTESIA_API_KEY` | Yes* | - | Cartesia AI API key for TTS |
+| `POSTGRES_USER` | No | `voicelab_user` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | No | `voicelab_password` | PostgreSQL password |
+| `POSTGRES_DB` | No | `voicelab_pro` | PostgreSQL database name |
+| `POSTGRES_HOST` | No | `localhost` | PostgreSQL host (use `db` in Docker) |
+| `DB_PORT` | No | `5432` | PostgreSQL port |
+| `DATABASE_URL` | No | Auto-built | Full database connection URL |
+| `SECRET_KEY` | No | `change-this-secret-key-in-production` | JWT secret key |
+| `ENVIRONMENT` | No | `development` | Environment (development/staging/production) |
+| `FRONTEND_URL` | No | `http://localhost:3000` | Frontend URL for CORS |
+
+*At least one TTS provider API key is required (ElevenLabs or Cartesia)
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NEXT_PUBLIC_API_URL` | No | `http://localhost:8000` | Backend API URL |
 
 ## Troubleshooting
 
@@ -132,4 +189,26 @@ curl -X GET "https://api.elevenlabs.io/v1/user" \
 - Consider upgrading for production use
 
 The Free Tier has strict abuse detection to prevent system overload. For development/production use, upgrading to a paid plan is recommended as it removes most of these restrictions.
+
+### Cartesia AI API Issues
+
+**Error: "Invalid Cartesia API key"**
+
+- Verify your API key is correct in `backend/.env`
+- Get your API key from: https://play.cartesia.ai/keys
+- Ensure the key has proper permissions for TTS generation
+
+**Rate Limiting:**
+
+- Cartesia has rate limits based on your plan
+- If you hit rate limits, wait a few moments and try again
+- Consider upgrading your plan for higher limits
+
+**Test Your API Key:**
+
+```bash
+curl -X GET "https://api.cartesia.ai/voices" \
+  -H "Cartesia-Version: 2025-04-16" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
 

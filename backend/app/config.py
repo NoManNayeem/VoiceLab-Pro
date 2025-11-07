@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     # ElevenLabs
     elevenlabs_api_key: str = ""
     
+    # Cartesia AI
+    cartesia_api_key: str = ""
+    
     # FastAPI
     secret_key: str = ""
     environment: str = "development"
@@ -121,13 +124,25 @@ class Settings(BaseSettings):
         elevenlabs_key = os.getenv("ELEVENLABS_API_KEY", "").strip()
         self.elevenlabs_api_key = elevenlabs_key
         
+        # Cartesia AI - get from environment
+        cartesia_key = os.getenv("CARTESIA_API_KEY", "").strip()
+        self.cartesia_api_key = cartesia_key
+        
         # Only warn if truly missing (use logging instead of warnings for cleaner output)
         if not self.elevenlabs_api_key:
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(
-                "ELEVENLABS_API_KEY is not set. TTS functionality will not work. "
+                "ELEVENLABS_API_KEY is not set. ElevenLabs TTS functionality will not work. "
                 "Please set it in your .env file or environment variables."
+            )
+        
+        if not self.cartesia_api_key:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "CARTESIA_API_KEY is not set. Cartesia TTS functionality will not work. "
+                "Please set it in your .env file. Get your API key from https://play.cartesia.ai/keys"
             )
     
     class Config:

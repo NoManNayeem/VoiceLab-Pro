@@ -18,14 +18,30 @@
    cp backend/.env.example backend/.env
    ```
    
-   Edit `backend/.env` and add your ElevenLabs API key:
+   Edit `backend/.env` and add your API keys:
    ```
-   ELEVENLABS_API_KEY=your_api_key_here
+   # Required: At least one TTS provider API key
+   ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+   CARTESIA_API_KEY=your_cartesia_api_key_here
+   
+   # Optional: Database settings (defaults provided)
+   POSTGRES_USER=voicelab_user
+   POSTGRES_PASSWORD=voicelab_password
+   POSTGRES_DB=voicelab_pro
+   
+   # Optional: Application settings
+   SECRET_KEY=change-this-secret-key-in-production
+   ENVIRONMENT=development
    ```
 
    Create `frontend/.env.local` file:
    ```bash
    cp frontend/.env.local.example frontend/.env.local
+   ```
+   
+   Edit `frontend/.env.local` (optional - defaults provided):
+   ```
+   NEXT_PUBLIC_API_URL=http://localhost:8000
    ```
 
 3. **Start all services:**
@@ -94,7 +110,7 @@
    npm install
    ```
 
-3. Create `.env.local` file with:
+3. Create `.env.local` file (optional - defaults provided):
    ```
    NEXT_PUBLIC_API_URL=http://localhost:8000
    ```
@@ -160,9 +176,12 @@ voicelab-pro/
 - Ensure migrations are applied: `alembic upgrade head`
 
 ### TTS generation fails
-- Verify ElevenLabs API key is set in `.env`
-- Check API key is valid and has credits
+- Verify at least one TTS provider API key is set in `.env`:
+  - `ELEVENLABS_API_KEY` for ElevenLabs TTS
+  - `CARTESIA_API_KEY` for Cartesia AI TTS
+- Check API key is valid and has credits/quota
 - Review backend logs for error messages
+- For ElevenLabs: Check if Free Tier restrictions apply (VPN/Proxy issues)
 
 ## Production Deployment
 

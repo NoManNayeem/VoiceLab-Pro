@@ -147,6 +147,45 @@ class ApiClient {
   async testElevenLabs() {
     return this.request('/api/elevenlabs/test');
   }
+
+  /**
+   * Generate Cartesia TTS audio
+   */
+  async generateCartesiaTTS(text, options = {}) {
+    return this.request('/api/cartesia/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        text,
+        voice_id: options.voiceId,
+        model_id: options.modelId || 'sonic-3',
+        language: options.language,
+        speed: options.speed || 1.0,
+        volume: options.volume || 1.0,
+        emotion: options.emotion || 'neutral',
+      }),
+    });
+  }
+
+  /**
+   * Get available Cartesia voices
+   */
+  async getCartesiaVoices() {
+    return this.request('/api/cartesia/voices');
+  }
+
+  /**
+   * Get available Cartesia models
+   */
+  async getCartesiaModels() {
+    return this.request('/api/cartesia/models');
+  }
+
+  /**
+   * Get available languages
+   */
+  async getCartesiaLanguages() {
+    return this.request('/api/cartesia/languages');
+  }
 }
 
 export const apiClient = new ApiClient();
